@@ -27,23 +27,39 @@ public class SubscriptionService {
 	HashMap<String, Plans> music = new HashMap<>();
 	HashMap<String, Plans> video = new HashMap<>();
 	HashMap<String, Plans> podcast = new HashMap<>();
+	HashMap<String,Integer> topUp = new HashMap<>();
+	
+	static int reneval = 0;
 
 	public ArrayList<ReneValRemainder> addSubscription(Subscriptions subs) {
 
 		validateJson(subs);
-		int renval = 0;
+		
 
 		TopUp up = subs.getTopUp().size() > 0 ? subs.getTopUp().get(0) : null;
 		ArrayList<ReneValRemainder> response = new ArrayList<>();
-		subs.getPlans().stream().filter((plan) -> plan.getSubscriptionCatogary().equals("music")).forEach((plan) ->
-        
-		response.add(new ReneValRemainder(addPodCastSub(plan, up, subs.getDate())))
+		subs.getPlans().stream().filter((plan) -> plan.getSubscriptionCatogary().equals("music")).forEach((plan) ->{
+        reneval += music.get(plan.getPlanName()).getFee();
+		response.add(new ReneValRemainder(addMusicSub(plan, up, subs.getDate())));}
 
 		);
-		subs.getPlans().stream().filter((plan) -> plan.getSubscriptionCatogary().equals("video"))
-				.forEach((plan) -> response.add(new ReneValRemainder(addPodCastSub(plan, up, subs.getDate()))));
+		subs.getPlans().stream().filter( (plan) -> plan.getSubscriptionCatogary().equals("video"))
+				.forEach((plan) -> {
+			    reneval += music.get(plan.getPlanName()).getFee();
+				response.add(new ReneValRemainder(addVideoSub(plan, up, subs.getDate()))); });
+		
 		subs.getPlans().stream().filter((plan) -> plan.getSubscriptionCatogary().equals("podcast"))
-				.forEach((plan) -> response.add(new ReneValRemainder(addPodCastSub(plan, up, subs.getDate()))));
+				.forEach((plan) -> {
+					 reneval += music.get(plan.getPlanName()).getFee();
+					response.add(new ReneValRemainder(addPodCastSub(plan, up, subs.getDate())));
+				});
+		
+		if(up != null ) {
+			reneval += (up.getNoOfDevices()*topUp.get(up.getName()));
+		}
+		response.add(new ReneValRemainder("RENEWAL_AMOUNT "+reneval));
+		
+		
 
 		return response;
 	}
@@ -71,7 +87,7 @@ public class SubscriptionService {
 		isValidPlan(plan.getPlanName());
 
 		try {
-			return "RENEWAL_REMINDER VIDEO" + addMonths(date, video.get(plan.getPlanName()).getValidity());
+			return "RENEWAL_REMINDER VIDEO " + addMonths(date, video.get(plan.getPlanName()).getValidity());
 		} catch (ParseException e) {
 			throw new AddSubscriptionFailed("ADD_SUBSCRIPTION_FAILED", " : INVALID_DATE");
 		}
@@ -136,6 +152,10 @@ public class SubscriptionService {
 		podcast.put("free", new Plans("free", 0, 1));
 		podcast.put("personal", new Plans("persnal", 100, 1));
 		podcast.put("premium", new Plans("premium", 300, 3));
+		
+		topUp.put("FOUR_DEVICE", 50);
+		topUp.put("FOUR_DEVICE", 100);
+		
 	}
 
 }
